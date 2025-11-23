@@ -3,12 +3,15 @@ import yfinance as yf
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import nltk
 
-# Download VADER lexicon (only first run)
+# Download VADER lexicon (first run only)
 nltk.download("vader_lexicon")
 
-app = FastAPI()
+app = FastAPI(
+    title="YFinance API Backend",
+    version="1.1.0",
+    description="A simple API wrapper around yfinance with a sentiment analysis endpoint."
+)
 
-# Initialize VADER sentiment analyzer
 sia = SentimentIntensityAnalyzer()
 
 @app.get("/")
@@ -37,53 +40,43 @@ def get_news(symbol: str):
     ticker = yf.Ticker(symbol)
     return ticker.news
 
-
-# ------------------------------------------------------------
-# NEW ENDPOINT: SENTIMENT ANALYSIS
-# ------------------------------------------------------------
 @app.get("/sentiment/{symbol}")
 def get_sentiment(symbol: str):
-    """
-    Returns sentiment scores for each news article related to the symbol.
-    Also returns an aggregated sentiment score.
-    """
     ticker = yf.Ticker(symbol)
     news = ticker.news
 
     if not news:
         raise HTTPException(status_code=404, detail="No news found for this symbol")
 
-    sentiment_results = []
-    compound_scores = []
+    results = []
+    scores = []
 
     for article in news:
         title = article.get("title", "")
         summary = article.get("summary", "")
         text = f"{title}. {summary}"
 
-        scores = sia.polarity_scores(text)
-        compound_scores.append(scores["compound"])
+        sentiment = sia.polarity_scores(text)
+        scores.append(sentiment["compound"])
 
-        sentiment_results.append({
+        results.append({
             "title": title,
             "publisher": article.get("publisher"),
             "link": article.get("link"),
             "summary": summary,
-            "sentiment": scores
+            "sentiment": sentiment
         })
 
-    # Aggregate sentiment
-    avg_compound = round(sum(compound_scores) / len(compound_scores), 4)
-
-    sentiment_label = (
-        "positive" if avg_compound > 0.05
-        else "negative" if avg_compound < -0.05
+    avg = round(sum(scores) / len(scores), 4)
+    label = (
+        "positive" if avg > 0.05
+        else "negative" if avg < -0.05
         else "neutral"
     )
 
     return {
         "symbol": symbol.upper(),
-        "overall_sentiment": sentiment_label,
-        "compound_score": avg_compound,
-        "articles": sentiment_results
+        "overall_sentiment": label,
+        "compound_score": avg,
+        "articles": results
     }

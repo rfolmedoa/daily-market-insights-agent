@@ -1,21 +1,23 @@
 openapi: 3.0.1
 info:
   title: YFinance API Backend
-  version: 1.0.0
+  version: 1.1.0
   description: |
     A simple API wrapper around the Python yfinance library.
-    Provides stock price, historical data, and news endpoints.
-
-servers:
-  - url: https://yfinance-fastapi-service.onrender.com
-    description: Render deployment base URL
+    Includes endpoints for price, history, news, and sentiment analysis.
 
 paths:
 
+  /:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: API status
+
   /price/{symbol}:
     get:
-      summary: Get current market price for a ticker
-      description: Returns the current market price, currency, and company name.
+      summary: Get current price for a ticker
       parameters:
         - name: symbol
           in: path
@@ -30,64 +32,35 @@ paths:
             application/json:
               schema:
                 type: object
-                properties:
-                  symbol:
-                    type: string
-                    example: AAPL
-                  price:
-                    type: number
-                    example: 193.36
-                  currency:
-                    type: string
-                    example: USD
-                  name:
-                    type: string
-                    example: Apple Inc.
 
   /history/{symbol}:
     get:
-      summary: Get historical OHLC data for a ticker
-      description: Returns historical price data for the specified symbol.
+      summary: Get historical OHLC data
       parameters:
         - name: symbol
           in: path
           required: true
-          schema:
-            type: string
-            example: MSFT
         - name: period
           in: query
-          required: false
           schema:
             type: string
             default: 1mo
-            example: 1mo
         - name: interval
           in: query
-          required: false
           schema:
             type: string
             default: 1d
-            example: 1d
       responses:
         '200':
-          description: Historical price data
-          content:
-            application/json:
-              schema:
-                type: object
+          description: Historical data
 
   /news/{symbol}:
     get:
-      summary: Get news articles for a ticker
-      description: Returns recent news for the stock symbol.
+      summary: Get news for a ticker
       parameters:
         - name: symbol
           in: path
           required: true
-          schema:
-            type: string
-            example: TSLA
       responses:
         '200':
           description: List of news articles
@@ -97,3 +70,19 @@ paths:
                 type: array
                 items:
                   type: object
+
+  /sentiment/{symbol}:
+    get:
+      summary: Sentiment analysis for ticker news
+      description: Returns VADER sentiment scores for each news article and an aggregated score.
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+      responses:
+        '200':
+          description: Sentiment scores
+          content:
+            application/json:
+              schema:
+                type: object
